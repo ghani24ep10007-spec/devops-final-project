@@ -76,7 +76,7 @@ services:
     volumes:
       - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
     ports:
-      - "9090:9090"
+      - "9091:9090" # <--- INI ADALAH PORT YANG KITA UBAH AGAR TIDAK TABRAKAN
 
   # 5. Grafana
   grafana:
