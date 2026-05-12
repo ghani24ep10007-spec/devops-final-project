@@ -1,0 +1,94 @@
+version: '3.8'
+
+services:
+  # 1 & 2. Aplikasi (WordPress) + Database (MariaDB)
+  db:
+    image: mariadb:10.6
+    container_name: project_db
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_DATABASE: wordpress
+      MYSQL_USER: wpuser
+      MYSQL_PASSWORD: wppassword
+    volumes:
+      - db_data:/var/lib/mysql
+
+  wordpress:
+    image: wordpress:latest
+    container_name: project_web
+    restart: always
+    ports:
+      - "8080:80"
+    environment:
+      WORDPRESS_DB_HOST: db:3306
+      WORDPRESS_DB_USER: wpuser
+      WORDPRESS_DB_PASSWORD: wppassword
+      WORDPRESS_DB_NAME: wordpress
+    depends_on:
+      - db
+
+  # 2. Nginx Proxy Manager
+  npm:
+    image: 'jc21/nginx-proxy-manager:latest'
+    container_name: project_npm
+    restart: always
+    ports:
+      - '80:80'
+      - '81:81'
+      - '443:443'
+    volumes:
+      - ./npm/data:/data
+      - ./npm/letsencrypt:/etc/letsencrypt
+    depends_on:
+      - db
+
+  # 3 & 4. Monitoring NPM (Loki + Promtail)
+  loki:
+    image: grafana/loki:2.8.2
+    container_name: project_loki
+    ports:
+      - "3100:3100"
+    command: -config.file=/etc/loki/local-config.yaml
+
+  promtail:
+    image: grafana/promtail:2.8.2
+    container_name: project_promtail
+    volumes:
+      - ./npm/data/logs:/var/log/npm:ro
+      - ./promtail/promtail-config.yml:/etc/promtail/config.yml
+    command: -config.file=/etc/promtail/config.yml
+
+  # 3 & 4. Monitoring Database (Prometheus + MySQL Exporter)
+  mysql-exporter:
+    image: prom/mysqld-exporter
+    container_name: project_mysql_exporter
+    environment:
+      DATA_SOURCE_NAME: "root:rootpassword@(db:3306)/"
+    ports:
+      - "9104:9104"
+    depends_on:
+      - db
+
+  prometheus:
+    image: prom/prometheus
+    container_name: project_prometheus
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+    ports:
+      - "9090:9090"
+
+  # 5. Grafana
+  grafana:
+    image: grafana/grafana
+    container_name: project_grafana
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    depends_on:
+      - prometheus
+      - loki
+
+volumes:
+  db_data:
