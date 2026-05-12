@@ -1,10 +1,9 @@
 version: '3.8'
 services:
-  # SENSOR HARDWARE UBUNTU
+  # SENSOR HARDWARE (CPU, RAM, DISK)
   node-exporter:
     image: prom/node-exporter:latest
     container_name: project_node_exporter
-    restart: always
     volumes:
       - /proc:/host/proc:ro
       - /sys:/host/sys:ro
@@ -16,11 +15,10 @@ services:
     ports:
       - "9100:9100"
 
-  # DATABASE
+  # DATABASE (MariaDB)
   db:
     image: mariadb:10.6
     container_name: project_db
-    restart: always
     environment:
       MYSQL_ROOT_PASSWORD: rootpassword
       MYSQL_DATABASE: wordpress
@@ -29,11 +27,10 @@ services:
     volumes:
       - db_data:/var/lib/mysql
 
-  # WEB SERVER
+  # WEB SERVER (WordPress)
   wordpress:
     image: wordpress:latest
     container_name: project_web
-    restart: always
     ports:
       - "8080:80"
     environment:
@@ -44,11 +41,10 @@ services:
     depends_on:
       - db
 
-  # REVERSE PROXY
+  # REVERSE PROXY & SSL (Nginx Proxy Manager)
   npm:
     image: 'jc21/nginx-proxy-manager:latest'
     container_name: project_npm
-    restart: always
     ports:
       - '80:80'
       - '81:81'
@@ -57,7 +53,7 @@ services:
       - ./npm/data:/data
       - ./npm/letsencrypt:/etc/letsencrypt
 
-  # LOGGING
+  # LOGGING (Loki & Promtail)
   loki:
     image: grafana/loki:2.8.2
     container_name: project_loki
@@ -73,7 +69,7 @@ services:
       - ./promtail/promtail-config.yml:/etc/promtail/config.yml
     command: -config.file=/etc/promtail/config.yml
 
-  # METRICS COLLECTOR
+  # MONITORING ENGINE (Prometheus)
   mysql-exporter:
     image: prom/mysqld-exporter
     container_name: project_mysql_exporter
@@ -88,7 +84,7 @@ services:
     ports:
       - "9091:9090"
 
-  # VISUALIZATION (THE BRAIN)
+  # VISUALISASI (Grafana)
   grafana:
     image: grafana/grafana
     container_name: project_grafana
