@@ -1,7 +1,9 @@
 global:
   scrape_interval: 15s
-
 scrape_configs:
   - job_name: 'mysql'
     static_configs:
-      - targets: ['mysql-exporter:9104']
+      - targets: ['project_mysql_exporter:9104']
+  - job_name: 'ubuntu-hardware'
+    static_configs:
+      - targets: ['node-exporter:9104']

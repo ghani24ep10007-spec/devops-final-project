@@ -1,5 +1,22 @@
 version: '3.8'
 services:
+  # SENSOR HARDWARE UBUNTU
+  node-exporter:
+    image: prom/node-exporter:latest
+    container_name: project_node_exporter
+    restart: always
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+    command:
+      - '--path.procfs=/host/proc'
+      - '--path.rootfs=/rootfs'
+      - '--path.sysfs=/host/sys'
+    ports:
+      - "9100:9100"
+
+  # DATABASE
   db:
     image: mariadb:10.6
     container_name: project_db
@@ -12,6 +29,7 @@ services:
     volumes:
       - db_data:/var/lib/mysql
 
+  # WEB SERVER
   wordpress:
     image: wordpress:latest
     container_name: project_web
@@ -26,6 +44,7 @@ services:
     depends_on:
       - db
 
+  # REVERSE PROXY
   npm:
     image: 'jc21/nginx-proxy-manager:latest'
     container_name: project_npm
@@ -37,9 +56,8 @@ services:
     volumes:
       - ./npm/data:/data
       - ./npm/letsencrypt:/etc/letsencrypt
-    depends_on:
-      - db
 
+  # LOGGING
   loki:
     image: grafana/loki:2.8.2
     container_name: project_loki
@@ -55,15 +73,12 @@ services:
       - ./promtail/promtail-config.yml:/etc/promtail/config.yml
     command: -config.file=/etc/promtail/config.yml
 
+  # METRICS COLLECTOR
   mysql-exporter:
     image: prom/mysqld-exporter
     container_name: project_mysql_exporter
     environment:
       DATA_SOURCE_NAME: "root:rootpassword@(db:3306)/"
-    ports:
-      - "9104:9104"
-    depends_on:
-      - db
 
   prometheus:
     image: prom/prometheus
@@ -73,6 +88,7 @@ services:
     ports:
       - "9091:9090"
 
+  # VISUALIZATION (THE BRAIN)
   grafana:
     image: grafana/grafana
     container_name: project_grafana
@@ -82,6 +98,7 @@ services:
       - GF_SECURITY_ADMIN_PASSWORD=admin
     volumes:
       - ./grafana/provisioning:/etc/grafana/provisioning
+      - ./grafana/dashboards_json:/etc/grafana/dashboards_json
     depends_on:
       - prometheus
       - loki
